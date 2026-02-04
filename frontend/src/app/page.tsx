@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type VisitStatus = "not_visited" | "passed_by" | "visited" | "thorough";
+type VisitStatus = "not_visited" | "visited" | "explored";
 
 type Place = {
   id: number;
