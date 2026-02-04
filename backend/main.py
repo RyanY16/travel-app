@@ -29,13 +29,14 @@ class VisitUpdate(BaseModel):
     status: VisitStatus
 
 
-# Optional: allow adding places later via API
 class PlaceCreate(BaseModel):
     name: str
     category: str
     lat: float
     lon: float
-
+    country: str
+    city: str | None = None
+    description: str | None = None
 
 def seed_places_if_empty(session: Session):
     existing = session.exec(select(Place)).first()
@@ -43,8 +44,8 @@ def seed_places_if_empty(session: Session):
         return  # already seeded
 
     seed = [
-        Place(name="Mt Takao", category="mountain", lat=35.625, lon=139.243),
-        Place(name="Tokyo Skytree", category="landmark", lat=35.710, lon=139.810),
+        Place(name="Mt Takao", category="mountain", lat=35.625, lon=139.243, city="Tokyo", country="Japan"),
+        Place(name="Tokyo Skytree", category="landmark", lat=35.710, lon=139.810, city="Tokyo", country="Japan"),
     ]
     session.add_all(seed)
     session.commit()
@@ -62,6 +63,13 @@ def on_startup():
 def root():
     return {"message": "Hello from the backend"}
 
+
+@app.get("/places/{place_id}")
+def get_place(place_id: int, session: Session = Depends(get_session)):
+    place = session.get(Place, place_id)
+    if not place:
+        return {"ok": False, "error": "Place not found"}
+    return place
 
 @app.get("/places")
 def get_places(session: Session = Depends(get_session)) -> List[dict]:
@@ -84,7 +92,6 @@ def get_places(session: Session = Depends(get_session)) -> List[dict]:
         )
     return out
 
-
 @app.post("/visits")
 def set_visit(data: VisitUpdate, session: Session = Depends(get_session)):
     place = session.get(Place, data.place_id)
@@ -103,8 +110,23 @@ def set_visit(data: VisitUpdate, session: Session = Depends(get_session)):
 
 @app.post("/places")
 def create_place(data: PlaceCreate, session: Session = Depends(get_session)):
-    place = Place(name=data.name, category=data.category, lat=data.lat, lon=data.lon)
+    place = Place(**data.model_dump())
     session.add(place)
     session.commit()
     session.refresh(place)
-    return {"ok": True, "id": place.id}
+    return place
+
+@app.delete("/places/{place_id}")
+def delete_place(place_id: int, session: Session = Depends(get_session)):
+    place = session.get(Place, place_id)
+    if not place:
+        return {"ok": False, "error": "Place not found"}
+
+    # also delete visit row if it exists (so no orphan record)
+    visit = session.exec(select(Visit).where(Visit.place_id == place_id)).first()
+    if visit:
+        session.delete(visit)
+
+    session.delete(place)
+    session.commit()
+    return {"ok": True}

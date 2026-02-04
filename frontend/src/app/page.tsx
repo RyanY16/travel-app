@@ -22,6 +22,12 @@ export default function Home() {
   async function loadPlaces() {
     const res = await fetch(`${API_BASE}/places`);
     const data = await res.json();
+
+    if (!Array.isArray(data)) {
+      console.error("Expected array, got:", data);
+      setPlaces([]);
+      return;
+    }
     setPlaces(data);
   }
 

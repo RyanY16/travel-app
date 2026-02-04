@@ -3,7 +3,6 @@ from sqlmodel import SQLModel, Field
 
 VisitStatus = Literal["not_visited", "visited", "explored"]
 
-
 class Place(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
@@ -11,11 +10,12 @@ class Place(SQLModel, table=True):
     lat: float
     lon: float
 
+    country: str
+    city: Optional[str] = None
+    description: Optional[str] = None
+
 
 class Visit(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-
-    # single-user for now: one status per place
     place_id: int = Field(index=True, unique=True)
-
     status: str
